@@ -2399,7 +2399,7 @@ function buildYearSelector() {
   records.forEach(function(r) {
     if (r.ano && r.ano >= 2018) anos.add(r.ano);
   });
-  var sorted = anos.sort(function(a,b){ return b-a; });
+  var sorted = Array.from(anos).sort(function(a,b){ return b-a; });
   sel.innerHTML = '<option value="">Todos os anos</option>' +
     sorted.map(function(a) {
       return '<option value="'+a+'"'+(a===anoAtual?' selected':'')+'>'+a+'</option>';
@@ -2464,14 +2464,14 @@ function buildImportYearSelects() {
   function getActiveUrl(cfg) {
     if (!cfg) return null;
     const urls = cfg.urls || {};
-    const key = (anoAtual || '').toString();
+    const key = typeof anoAtual !== 'undefined' && anoAtual ? anoAtual.toString() : '';
     return urls[key] || urls.default || cfg.url || null;
   }
 
   // ── Preenche modal com config salva ─────────────────────────────────────────
   window.openSheetConfig = function () {
     const c   = loadCfg();
-    const key = (anoAtual || '').toString() || 'default';
+    const key = (typeof anoAtual !== 'undefined' && anoAtual ? anoAtual.toString() : '') || 'default';
     const urlField = el('scfg-url');
     if (urlField) {
       if (c.urls && (c.urls[key] || c.urls.default)) {
@@ -2611,7 +2611,8 @@ function buildImportYearSelects() {
 
   // ── Núcleo do sync com retry e back-off exponencial ─────────────────────────
   async function syncNowInternal(cfg, isManual, attempt) {
-    if (!cfg || !cfg.url) return;
+    const url = getActiveUrl(cfg);
+    if (!cfg || !url) return;
     if (isSyncing && !isManual) return; // ignora auto-sync se já está rodando
     isSyncing = true;
     attempt   = attempt || 1;
