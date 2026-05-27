@@ -2412,6 +2412,7 @@ function onAnoChange() {
   buildYearSelector();
   renderDashboard();
   renderTable();
+  syncNow();
 }
 
 function autoFillAno(val) {
@@ -2460,11 +2461,27 @@ function buildImportYearSelects() {
   // ── Persistência da config ──────────────────────────────────────────────────
   function loadCfg()       { try { return JSON.parse(localStorage.getItem(SCFG_KEY)) || {}; } catch(e) { return {}; } }
   function saveCfg(c)      { localStorage.setItem(SCFG_KEY, JSON.stringify(c)); }
+  function getActiveUrl(cfg) {
+    if (!cfg) return null;
+    const urls = cfg.urls || {};
+    const key = (anoAtual || '').toString();
+    return urls[key] || urls.default || cfg.url || null;
+  }
 
   // ── Preenche modal com config salva ─────────────────────────────────────────
   window.openSheetConfig = function () {
-    const c = loadCfg();
-    if (c.url)      el('scfg-url').value      = c.url;
+    const c   = loadCfg();
+    const key = (anoAtual || '').toString() || 'default';
+    const urlField = el('scfg-url');
+    if (urlField) {
+      if (c.urls && (c.urls[key] || c.urls.default)) {
+        urlField.value = c.urls[key] || c.urls.default;
+      } else if (c.url) {
+        urlField.value = c.url;
+      } else {
+        urlField.value = '';
+      }
+    }
     if (c.interval !== undefined) el('scfg-interval').value = String(c.interval);
     const defs = { municipio:'municipio', curso:'curso', turno:'turno', alunos:'alunos',
       situacao:'situacao', ano:'ano', efet:'qtdEfet', deslig:'qtdDeslig',
@@ -2501,13 +2518,18 @@ function buildImportYearSelects() {
     if (!url)                           { toast('⚠️ Informe a URL da planilha!', 'error'); return; }
     if (!url.includes('docs.google.com')) { toast('⚠️ URL inválida. Use o link publicado do Google Sheets.', 'error'); return; }
     const interval = parseInt(el('scfg-interval').value) || 60;
-    const cfg = { url, interval, cols: getColMap() };
-    saveCfg(cfg);
+    const key      = (anoAtual || '').toString() || 'default';
+    const cfgAll = loadCfg();
+    cfgAll.urls      = cfgAll.urls || {};
+    cfgAll.urls[key] = url;
+    cfgAll.interval  = interval;
+    cfgAll.cols      = getColMap();
+    saveCfg(cfgAll);
     closeSheetConfig();
     failCount = 0; lastHash = '';
-    startAutoSync(cfg);
-    syncNowInternal(cfg, true);
-    toast('✅ Configuração salva! Iniciando sincronização...');
+    startAutoSync(cfgAll);
+    syncNowInternal(cfgAll, true);
+    toast(`✅ Configuração salva para o ano ${key === 'default' ? '(padrão)' : key}! Iniciando sincronização...`);
   };
 
   // ── Testa conexão sem salvar ────────────────────────────────────────────────
@@ -2529,7 +2551,12 @@ function buildImportYearSelects() {
   // ── API pública: disparo manual ─────────────────────────────────────────────
   window.syncNow = function () {
     const cfg = loadCfg();
-    if (!cfg.url) { toast('⚠️ Configure a planilha primeiro!', 'error'); openSheetConfig(); return; }
+    const url = getActiveUrl(cfg);
+    if (!url) {
+      toast('⚠️ Configure a planilha para este ano primeiro!', 'error');
+      openSheetConfig();
+      return;
+    }
     failCount = 0;
     syncNowInternal(cfg, true);
   };
@@ -2591,7 +2618,7 @@ function buildImportYearSelects() {
     updateStatusBar(cfg, 'loading');
 
     try {
-      const rows = await fetchAndParse(cfg.url);
+      const rows = await fetchAndParse(url);
       const changed = processRows(rows, cfg.cols || {});
 
       if (changed) {
@@ -2743,9 +2770,9 @@ function buildImportYearSelects() {
   // ── Inicialização ao carregar a página ───────────────────────────────────────
   function init() {
     const cfg = loadCfg();
-    if (cfg.url) {
+    const url = getActiveUrl(cfg);
+    if (url) {
       startAutoSync(cfg);
-      // Sync inicial com pequeno delay para não bloquear o render da página
       setTimeout(() => syncNowInternal(cfg, false), 1500);
     } else {
       updateStatusBar(null, 'off');
