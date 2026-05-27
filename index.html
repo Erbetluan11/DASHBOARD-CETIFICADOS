@@ -1715,7 +1715,7 @@ function renderDashboard() {
   $id('dash-total-cert').textContent    = cert;
   $id('dash-total-decl').textContent    = decl;
   $id('dash-total-alunos').textContent  = alunos;
-  $id('dash-subtitle').textContent      = `${records.length} turma(s) cadastrada(s)`;
+  $id('dash-subtitle').textContent      = `${anoRecords.length} registro(s)`;gth} turma(s) cadastrada(s)`;
 
   // ── NOVOS: Efetivados / Desligados / Sem Direito ──
   // ── Helper: converte valor para número seguro (0 se vazio/NaN)
@@ -1872,7 +1872,7 @@ document.querySelectorAll('.table th.sortable').forEach(th => {
 
 // ── RENDER TABLE ─────────────────────────────────────────────
 function renderTable() {
-  const filtered = sortData(getFiltered());
+  const filtered = sortData(getRecordsByAno());
   const tbody    = $id('turmas-tbody');
   const empty    = $id('empty-state');
   $id('table-count').textContent = filtered.length;
@@ -2396,17 +2396,17 @@ var anoAtual = new Date().getFullYear();
 function getRecordsByAno() {
   if (!anoAtual) return records;
   return records.filter(function(r) {
-    return r.ano === anoAtual;
+    return parseInt(r.ano, 10) === parseInt(anoAtual, 10);
   });
 }
+function getFiltered() { return getRecordsByAno(); }
 
 function buildYearSelector() {
   var sel = document.getElementById('ano-ref');
   if (!sel) return;
   var anos = new Set();
-  for (var y = 2018; y <= new Date().getFullYear(); y++) anos.add(y);
-  list.forEach(function(r) {
-    if (r.ano && r.ano >= 2018) anos.add(r.ano);
+  records.forEach(function(r) {
+    if (r.ano && r.ano >= 2018) anos.add(parseInt(r.ano, 10));
   });
   var sorted = Array.from(anos).sort(function(a,b){ return b-a; });
   sel.innerHTML = '<option value="">Todos os anos</option>' +
@@ -2417,10 +2417,7 @@ function buildYearSelector() {
 
 function onAnoChange() {
   var sel = document.getElementById('ano-ref');
-  anoAtual = sel.value ? parseInt(sel.value) : null;
-  buildYearSelector();
-  renderDashboard();
-  renderTable();
+  anoAtual = sel.value ? parseInt(sel.value, 10) : null;
   renderDashboard();
   renderTable();
 }
