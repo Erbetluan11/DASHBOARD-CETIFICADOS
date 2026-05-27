@@ -1715,7 +1715,7 @@ function renderDashboard() {
   $id('dash-total-cert').textContent    = cert;
   $id('dash-total-decl').textContent    = decl;
   $id('dash-total-alunos').textContent  = alunos;
-  $id('dash-subtitle').textContent      = `${anoRecords.length} registro(s)`;gth} turma(s) cadastrada(s)`;
+  $id('dash-subtitle').textContent = `${anoRecords.length} registro(s)`;gth} turma(s) cadastrada(s)`;
 
   // ── NOVOS: Efetivados / Desligados / Sem Direito ──
   // ── Helper: converte valor para número seguro (0 se vazio/NaN)
@@ -1872,7 +1872,7 @@ document.querySelectorAll('.table th.sortable').forEach(th => {
 
 // ── RENDER TABLE ─────────────────────────────────────────────
 function renderTable() {
-  const filtered = sortData(getRecordsByAno());
+  const filtered = sortData(getFiltered());
   const tbody    = $id('turmas-tbody');
   const empty    = $id('empty-state');
   $id('table-count').textContent = filtered.length;
@@ -2405,7 +2405,7 @@ function buildYearSelector() {
   var sel = document.getElementById('ano-ref');
   if (!sel) return;
   var anos = Array.from(new Set(records.map(function(r){ return parseInt(r.ano, 10); }).filter(function(n){ return !isNaN(n) && n >= 2018; }))).sort(function(a,b){ return b-a; });
-  sel.innerHTML = '<option value="">Todos os anos</option>' + anos.map(function(a){ return '<option value="'+a+'"'+(a===anoAtual?' selected':'')+'>'+a+'</option>'; }).join('');
+  sel.innerHTML = '<option value=\"\">Todos os anos</option>' + anos.map(function(a){ return '<option value=\"'+a+'\"'+(a===anoAtual?' selected':'')+'>'+a+'</option>'; }).join('');
 }
 
 function onAnoChange() {
