@@ -1686,10 +1686,6 @@ $id('year').textContent = new Date().getFullYear();
 })();
 
 // ── DASHBOARD ────────────────────────────────────────────────
-function filteredRecords() {
-  return anoAtual ? records.filter(r => parseInt(r.ano) === parseInt(anoAtual)) : records;
-}
-
 function renderDashboard() {
   const counts = { PENDENTE:0,'EM ANDAMENTO':0,IMPRESSO:0,'NA GRÁFICA':0,ENTREGUE:0 };
   let cert=0, decl=0, alunos=0, efet=0, deslig=0, semDir=0;
@@ -1715,7 +1711,7 @@ function renderDashboard() {
   $id('dash-total-cert').textContent    = cert;
   $id('dash-total-decl').textContent    = decl;
   $id('dash-total-alunos').textContent  = alunos;
-  $id('dash-subtitle').textContent = `${anoRecords.length} registro(s)`;gth} turma(s) cadastrada(s)`;
+  $id('dash-subtitle').textContent      = `${records.length} turma(s) cadastrada(s)`;
 
   // ── NOVOS: Efetivados / Desligados / Sem Direito ──
   // ── Helper: converte valor para número seguro (0 se vazio/NaN)
@@ -2396,23 +2392,32 @@ var anoAtual = new Date().getFullYear();
 function getRecordsByAno() {
   if (!anoAtual) return records;
   return records.filter(function(r) {
-    return parseInt(r.ano, 10) === parseInt(anoAtual, 10);
+    return r.ano === anoAtual;
   });
 }
-function getFiltered() { return getRecordsByAno(); }
 
 function buildYearSelector() {
   var sel = document.getElementById('ano-ref');
   if (!sel) return;
-  var anos = Array.from(new Set(records.map(function(r){ return parseInt(r.ano, 10); }).filter(function(n){ return !isNaN(n) && n >= 2018; }))).sort(function(a,b){ return b-a; });
-  sel.innerHTML = '<option value=\"\">Todos os anos</option>' + anos.map(function(a){ return '<option value=\"'+a+'\"'+(a===anoAtual?' selected':'')+'>'+a+'</option>'; }).join('');
+  var anos = new Set();
+  for (var y = 2018; y <= new Date().getFullYear(); y++) anos.add(y);
+  records.forEach(function(r) {
+    if (r.ano && r.ano >= 2018) anos.add(r.ano);
+  });
+  var sorted = Array.from(anos).sort(function(a,b){ return b-a; });
+  sel.innerHTML = '<option value="">Todos os anos</option>' +
+    sorted.map(function(a) {
+      return '<option value="'+a+'"'+(a===anoAtual?' selected':'')+'>'+a+'</option>';
+    }).join('');
 }
 
 function onAnoChange() {
   var sel = document.getElementById('ano-ref');
-  anoAtual = sel && sel.value ? parseInt(sel.value, 10) : null;
+  anoAtual = sel.value ? parseInt(sel.value) : null;
+  buildYearSelector();
   renderDashboard();
   renderTable();
+  syncNow();
 }
 
 function autoFillAno(val) {
@@ -2611,9 +2616,8 @@ function buildImportYearSelects() {
   }
 
   // ── Núcleo do sync com retry e back-off exponencial ─────────────────────────
-  async async function syncNowInternal(cfg, isManual, attempt) {
-    const url = cfg && cfg.url ? cfg.url : getActiveUrl(cfg);
-    if (!cfg || !url) return;
+  async function syncNowInternal(cfg, isManual, attempt) {
+    if (!cfg || !cfg.url) return;
     if (isSyncing && !isManual) return; // ignora auto-sync se já está rodando
     isSyncing = true;
     attempt   = attempt || 1;
@@ -2777,7 +2781,7 @@ function buildImportYearSelects() {
   // ── Inicialização ao carregar a página ───────────────────────────────────────
   function init() {
     const cfg = loadCfg();
-    const url = cfg && cfg.url ? cfg.url : getActiveUrl(cfg);
+    const url = getActiveUrl(cfg);
     if (url) {
       startAutoSync(cfg);
       setTimeout(() => syncNowInternal(cfg, false), 1500);
